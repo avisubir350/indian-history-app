@@ -1,0 +1,18 @@
+# Build output
+target/
+*.war
+*.jar
+*.class
+
+# Secrets — never commit
+.env
+
+# IDE files
+.idea/
+*.iml
+.vscode/
+*.swp
+
+# OS files
+.DS_Store
+Thumbs.db

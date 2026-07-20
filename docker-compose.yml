@@ -1,0 +1,85 @@
+version: '3.8'
+
+# ============================================================
+#  Bharata Katha — Docker Compose
+#  Services:
+#    db  — MySQL 8
+#    app — Tomcat 9 + WAR (built via Dockerfile)
+# ============================================================
+
+services:
+
+  # ── MySQL Database ────────────────────────────────────────
+  db:
+    image: mysql:8.0
+    container_name: bharata-katha-db
+    restart: unless-stopped
+
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE:      ${MYSQL_DATABASE:-indian_history_db}
+      MYSQL_USER:          ${MYSQL_USER:-appuser}
+      MYSQL_PASSWORD:      ${MYSQL_PASSWORD:-apppassword}
+
+    ports:
+      - "3306:3306"          # Remove this line in production
+
+    volumes:
+      # Seed schema + data on first run
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      # Persist data between container restarts
+      - mysql_data:/var/lib/mysql
+
+    networks:
+      - bharata-net
+
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost",
+             "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-rootpassword}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # ── Tomcat Application ────────────────────────────────────
+  app:
+    container_name: bharata-katha-app
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+
+    environment:
+      # Passed through to DBConnection.java via System.getenv()
+      DB_URL:      jdbc:mysql://db:3306/${MYSQL_DATABASE:-indian_history_db}?useSSL=false&serverTimezone=UTC&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
+      DB_USER:     ${MYSQL_USER:-appuser}
+      DB_PASSWORD: ${MYSQL_PASSWORD:-apppassword}
+      # JVM tuning
+      JAVA_OPTS:   "-Xms256m -Xmx512m -XX:+UseG1GC"
+
+    ports:
+      - "8080:8080"
+
+    depends_on:
+      db:
+        condition: service_healthy   # Wait until MySQL is ready
+
+    networks:
+      - bharata-net
+
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+# ── Named Volumes ─────────────────────────────────────────────
+volumes:
+  mysql_data:
+    driver: local
+
+# ── Isolated Network ──────────────────────────────────────────
+networks:
+  bharata-net:
+    driver: bridge

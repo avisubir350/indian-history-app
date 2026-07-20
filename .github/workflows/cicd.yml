@@ -1,1 +1,50 @@
+name : Indian-history-app-ci_cd
+
+on: 
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+
+# job-1.....Compile, Test & Package the Java Application......
+  Compile-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # full history needed for SonarQube blame data
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Compile and Run Unit Tests
+        run: mvn -B clean test
+
+  # This step uploads your unit test reports so you can inspect failures from the GitHub UI
+      - name: Upload Surefire Test Reports
+        uses: actions/upload-artifact@v4
+        if: always() # Always run this step even if 'Compile and Test' fails
+        with:
+          name: surefire-test-reports
+          path: '**/target/surefire-reports/*.xml'
+          retention-days: 7
+
+      - name: Package Application (Skip Tests)
+        run: mvn -B package -DskipTests
+
+      - name: Upload JAR Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-jar
+          path: target/*.jar
+          retention-days: 1
 

@@ -50,12 +50,21 @@ jobs:
           
       - name: OWASP Dependency Check
         uses: dependency-check/Dependency-Check_Action@main
-        env:
-          JAVA_HOME: ${{ env.JAVA_HOME }}
+        id: depcheck
         with:
           project: "indian-history-app"
           path: "./"
-          format: "ALL"
-          output: "dependency-check-report"
+          format: "HTML"
+          out: "dependency-check-report"
+          args: >
+            --enableRetired
+
+      - name: Upload OWASP Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dependency-check-report
+          path: dependency-check-report/
+          retention-days: 7
    
 

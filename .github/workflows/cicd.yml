@@ -115,3 +115,42 @@ jobs:
         run: |
           docker push ${{ secrets.DOCKER_USERNAME }}/bharata-katha-app:latest
           docker push ${{ secrets.DOCKER_USERNAME }}/bharata-katha-app:${{ steps.vars.outputs.tag }}
+
+# ── Job 4: GitOps — Update config repo ────────────────────────────────────
+  gitops-update:
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    if: github.event_name == 'push'
+    steps:
+      - name: Checkout config repo
+        uses: actions/checkout@v4
+        with:
+          repository: 'avisubir350/indian-history-config'
+          token: ${{ secrets.GITOPS_TOKEN }}
+          path: 'indian-history-config'
+          ref: 'main'
+
+      - name: Update image tag across all manifests
+        run: |
+          cd indian-history-config
+
+          sed -i "s|image: ${{ secrets.DOCKER_USERNAME }}/bharata-katha-app:.*|image: ${{ secrets.DOCKER_USERNAME }}/bharata-katha-app:${{ needs.build-and-push.outputs.image_tag }}|g" \
+            namespace.yml \
+            secret.yml \
+            service.yml \
+            statefulset.yml \
+            deployment.yml \
+            monitoring.yml \
+            ingress.yml
+
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add namespace.yml secret.yml service.yml statefulset.yml deployment.yml monitoring.yml ingress.yml
+
+          if git diff --staged --quiet; then
+            echo "No changes detected. Skipping push."
+          else
+            git commit -m "chore: update image to ${{ needs.build-and-push.outputs.image_tag }} [skip ci]"
+            git push origin main
+          fi

@@ -47,6 +47,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    image: bharata-katha-app  
     restart: unless-stopped
 
     environment:

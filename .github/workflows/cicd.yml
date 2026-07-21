@@ -119,7 +119,7 @@ jobs:
 # ── Job 4: GitOps — Update config repo ────────────────────────────────────
   gitops-update:
     runs-on: ubuntu-latest
-    needs: build-and-push
+    needs: Build-Push
     if: github.event_name == 'push'
     steps:
       - name: Checkout config repo

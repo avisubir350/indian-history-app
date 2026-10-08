@@ -126,23 +126,23 @@ jobs:
       - name: Checkout config repo
         uses: actions/checkout@v4
         with:
-          repository: 'avisubir350/indian-history-config'
+          repository: 'avisubir350/indian_history-config'
           token: ${{ secrets.GITOPS_TOKEN }}
-          path: 'indian-history-config'
+          path: 'indian_history-config'
           ref: 'main'
 
       - name: Update image tag across all manifests
         run: |
-          cd indian-history-config
+          cd indian_history-config
           
           # Updated sed command to dynamically match the ACR login server and replace it with the new tag
           sed -i "s|image: .*/bharata-katha-app:.*|image: ${{ secrets.ACR_LOGIN_SERVER }}/bharata-katha-app:${{ needs.build-and-push.outputs.image_tag }}|g" \
             namespace.yml \
-            secret.yml \
+            secret-provider-class.yml \
             service.yml \
-            statefulset.yml \
+            hpa.yml \
             deployment.yml \
-            monitoring.yml \
+            podmonitor.yml \
             ingress.yml
 
           git config --global user.name "github-actions[bot]"

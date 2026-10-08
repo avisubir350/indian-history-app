@@ -88,8 +88,8 @@ jobs:
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
 
-      - name: Build image via Docker Compose
-        run: docker compose build
+      - name: Build image via Dockerfile
+        run: docker build -t bharata-katha-app:${{ steps.vars.outputs.tag }}
 
       - name: Tag image
         run: |

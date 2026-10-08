@@ -1,4 +1,3 @@
-
 name: Indian-history-app-ci_cd
 
 on:
@@ -82,24 +81,25 @@ jobs:
         id: vars
         run: echo "tag=1.0.${{ github.run_number }}" >> $GITHUB_OUTPUT
 
-      - name: Login to DockerHub
-        uses: docker/login-action@v3
+      - name: Login to Azure Container Registry
+        uses: azure/docker-login@v1
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+          login-server: ${{ secrets.ACR_LOGIN_SERVER }} # e.g., myregistry.azurecr.io
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
 
       - name: Build image via Docker Compose
         run: docker compose build
 
       - name: Tag image
         run: |
-          docker tag bharata-katha-app ${{ secrets.DOCKER_USERNAME }}/bharata-katha-app:latest
-          docker tag bharata-katha-app ${{ secrets.DOCKER_USERNAME }}/bharata-katha-app:${{ steps.vars.outputs.tag }}
+          docker tag bharata-katha-app ${{ secrets.ACR_LOGIN_SERVER }}/bharata-katha-app:latest
+          docker tag bharata-katha-app ${{ secrets.ACR_LOGIN_SERVER }}/bharata-katha-app:${{ steps.vars.outputs.tag }}
 
       - name: Trivy Image Scan
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ${{ secrets.DOCKER_USERNAME }}/bharata-katha-app:${{ steps.vars.outputs.tag }}
+          image-ref: ${{ secrets.ACR_LOGIN_SERVER }}/bharata-katha-app:${{ steps.vars.outputs.tag }}
           format: 'table'
           exit-code: '0'
           severity: 'HIGH,CRITICAL'
@@ -113,10 +113,10 @@ jobs:
           path: trivy-report.txt
           retention-days: 7
 
-      - name: Push image
+      - name: Push image to Azure Container Registry
         run: |
-          docker push ${{ secrets.DOCKER_USERNAME }}/bharata-katha-app:latest
-          docker push ${{ secrets.DOCKER_USERNAME }}/bharata-katha-app:${{ steps.vars.outputs.tag }}
+          docker push ${{ secrets.ACR_LOGIN_SERVER }}/bharata-katha-app:latest
+          docker push ${{ secrets.ACR_LOGIN_SERVER }}/bharata-katha-app:${{ steps.vars.outputs.tag }}
 
 # ── Job 4: GitOps — Update config repo ────────────────────────────────────
   gitops-update:
@@ -135,8 +135,9 @@ jobs:
       - name: Update image tag across all manifests
         run: |
           cd indian-history-config
-
-          sed -i "s|image: ${{ secrets.DOCKER_USERNAME }}/bharata-katha-app:.*|image: ${{ secrets.DOCKER_USERNAME }}/bharata-katha-app:${{ needs.build-and-push.outputs.image_tag }}|g" \
+          
+          # Updated sed command to dynamically match the ACR login server and replace it with the new tag
+          sed -i "s|image: .*/bharata-katha-app:.*|image: ${{ secrets.ACR_LOGIN_SERVER }}/bharata-katha-app:${{ needs.build-and-push.outputs.image_tag }}|g" \
             namespace.yml \
             secret.yml \
             service.yml \

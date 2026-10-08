@@ -88,13 +88,12 @@ jobs:
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
 
-      - name: Build image via Dockerfile
-        run: docker build -t bharata-katha-app:${{ steps.vars.outputs.tag }} .
-
-      - name: Tag image
+      - name: Build and Tag image
         run: |
-          docker tag bharata-katha-app ${{ secrets.ACR_LOGIN_SERVER }}/bharata-katha-app:latest
-          docker tag bharata-katha-app ${{ secrets.ACR_LOGIN_SERVER }}/bharata-katha-app:${{ steps.vars.outputs.tag }}
+          docker build \
+            -t ${{ secrets.ACR_LOGIN_SERVER }}/bharata-katha-app:latest \
+            -t ${{ secrets.ACR_LOGIN_SERVER }}/bharata-katha-app:${{ steps.vars.outputs.tag }} \
+            .
 
       - name: Trivy Image Scan
         uses: aquasecurity/trivy-action@master

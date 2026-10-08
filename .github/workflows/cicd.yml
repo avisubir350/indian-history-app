@@ -89,7 +89,7 @@ jobs:
           password: ${{ secrets.ACR_PASSWORD }}
 
       - name: Build image via Dockerfile
-        run: docker build -t bharata-katha-app:${{ steps.vars.outputs.tag }}
+        run: docker build -t bharata-katha-app:${{ steps.vars.outputs.tag }} .
 
       - name: Tag image
         run: |
